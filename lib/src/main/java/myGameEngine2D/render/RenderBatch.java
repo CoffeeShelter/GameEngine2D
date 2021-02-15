@@ -13,6 +13,7 @@ import static org.lwjgl.opengl.GL30.glGenVertexArrays;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.joml.Matrix4f;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 import org.lwjgl.opengl.GL15;
@@ -20,10 +21,9 @@ import org.lwjgl.opengl.GL15;
 import myGameEngine2D.components.SpriteComponent;
 import myGameEngine2D.shader.Shader;
 import myGameEngine2D.textures.Texture;
-import myGameEngine2D.util.AssetPool;
 import myGameEngine2D.window.Window;
 
-public class RenderBatch implements Comparable<RenderBatch>{
+public class RenderBatch implements Comparable<RenderBatch> {
 	// Vertex
 	// ======
 	// Pos Color tex Coords tex id
@@ -53,7 +53,7 @@ public class RenderBatch implements Comparable<RenderBatch>{
 	private int maxBatchSize;
 	private int zIndex;
 
-	public RenderBatch(int maxBatchSize, int zIndex){
+	public RenderBatch(int maxBatchSize, int zIndex) {
 		this.zIndex = zIndex;
 		this.sprites = new SpriteComponent[maxBatchSize];
 		this.maxBatchSize = maxBatchSize;
@@ -95,7 +95,7 @@ public class RenderBatch implements Comparable<RenderBatch>{
 
 		glVertexAttribPointer(3, TEX_ID_SIZE, GL_FLOAT, false, VERTEX_SIZE_BYTES, TEX_ID_OFFSET);
 		glEnableVertexAttribArray(3);
-		
+
 		glVertexAttribPointer(4, ENTITY_ID_SIZE, GL_FLOAT, false, VERTEX_SIZE_BYTES, ENTITY_ID_OFFSET);
 		glEnableVertexAttribArray(4);
 	}
@@ -121,47 +121,47 @@ public class RenderBatch implements Comparable<RenderBatch>{
 	}
 
 	public void render() {
-        boolean rebufferData = false;
-        
-        for (int i=0; i < numSprites; i++) {
-            SpriteComponent spr = sprites[i];
-            if (spr.isDirty()) {
-                loadVertexProperties(i);
-                spr.setClean();
-                rebufferData = true;
-            }
-        }
-        
-        if (rebufferData) {
-            GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboID);
-            GL15.glBufferSubData(GL15.GL_ARRAY_BUFFER, 0, vertices);
-        }
+		boolean rebufferData = false;
 
-        // Use shader
-        Shader shader = Renderer.getBoundShader();
-        shader.start();
-        shader.setMatrix4f("uProjection", Window.getScene().camera().getProjectionMatrix());
-        shader.setMatrix4f("uView", Window.getScene().camera().getViewMatrix());
-        for (int i=0; i < textures.size(); i++) {
-            GL15.glActiveTexture(GL15.GL_TEXTURE0 + i + 1);
-            textures.get(i).bind();
-        }
-        shader.setIntArray("uTextures", texSlots);
+		for (int i = 0; i < numSprites; i++) {
+			SpriteComponent spr = sprites[i];
+			if (spr.isDirty()) {
+				loadVertexProperties(i);
+				spr.setClean();
+				rebufferData = true;
+			}
+		}
 
-        glBindVertexArray(vaoID);
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
+		if (rebufferData) {
+			GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboID);
+			GL15.glBufferSubData(GL15.GL_ARRAY_BUFFER, 0, vertices);
+		}
 
-        glDrawElements(GL_TRIANGLES, this.numSprites * 6, GL_UNSIGNED_INT, 0);
+		// Use shader
+		Shader shader = Renderer.getBoundShader();
+		shader.start();
+		shader.setMatrix4f("uProjection", Window.getScene().camera().getProjectionMatrix());
+		shader.setMatrix4f("uView", Window.getScene().camera().getViewMatrix());
+		for (int i = 0; i < textures.size(); i++) {
+			GL15.glActiveTexture(GL15.GL_TEXTURE0 + i + 1);
+			textures.get(i).bind();
+		}
+		shader.setIntArray("uTextures", texSlots);
 
-        glDisableVertexAttribArray(0);
-        glDisableVertexAttribArray(1);
-        glBindVertexArray(0);
+		glBindVertexArray(vaoID);
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
 
-        for (int i=0; i < textures.size(); i++) {
-            textures.get(i).unbind();
-        }
-        shader.stop();
+		glDrawElements(GL_TRIANGLES, this.numSprites * 6, GL_UNSIGNED_INT, 0);
+
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+		glBindVertexArray(0);
+
+		for (int i = 0; i < textures.size(); i++) {
+			textures.get(i).unbind();
+		}
+		shader.stop();
 	}
 
 	private void loadVertexProperties(int index) {
@@ -175,14 +175,25 @@ public class RenderBatch implements Comparable<RenderBatch>{
 
 		// 텍스처 Id 0 은 텍스처 없이 색상만 출력
 		int texId = 0;
-        if (sprite.getTexture() != null) {
-            for (int i = 0; i < textures.size(); i++) {
-                if (textures.get(i).equals(sprite.getTexture())) {
-                    texId = i + 1;
-                    break;
-                }
-            }
-        }
+		if (sprite.getTexture() != null) {
+			for (int i = 0; i < textures.size(); i++) {
+				if (textures.get(i).equals(sprite.getTexture())) {
+					texId = i + 1;
+					break;
+				}
+			}
+		}
+
+		boolean isRotated = sprite.gameObject.transform.rotation != 0.0f;
+		Matrix4f transformMatrix = new Matrix4f().identity();
+		if (isRotated) {
+			transformMatrix.translate(sprite.gameObject.transform.position.x, sprite.gameObject.transform.position.y,
+					0);
+			transformMatrix.rotate((float) Math.toRadians(sprite.gameObject.transform.rotation), 
+					0, 0, 1);
+			transformMatrix.scale(sprite.gameObject.transform.scale.x,
+					sprite.gameObject.transform.scale.y, 0);
+		}
 
 		// Add vertice with the appropriate properties
 		float xAdd = 1.0f;
@@ -196,10 +207,15 @@ public class RenderBatch implements Comparable<RenderBatch>{
 				yAdd = 1.0f;
 			}
 
+			Vector4f currentPos = new Vector4f(sprite.gameObject.transform.position.x + (xAdd * sprite.gameObject.transform.scale.x),
+					sprite.gameObject.transform.position.y + (yAdd * sprite.gameObject.transform.scale.y), 0, 1);
+			if(isRotated) {
+				currentPos = new Vector4f(xAdd, yAdd, 0, 1).mul(transformMatrix);
+			}
+			
 			// 위치
-			vertices[offset] = sprite.gameObject.transform.position.x + (xAdd * sprite.gameObject.transform.scale.x);
-			vertices[offset + 1] = sprite.gameObject.transform.position.y
-					+ (yAdd * sprite.gameObject.transform.scale.y);
+			vertices[offset] = currentPos.x;
+			vertices[offset + 1] = currentPos.y;
 
 			// 색상
 			vertices[offset + 2] = color.x;
@@ -216,7 +232,7 @@ public class RenderBatch implements Comparable<RenderBatch>{
 
 			// Entity ID
 			vertices[offset + 9] = sprite.gameObject.getUid() + 1;
-			
+
 			offset += VERTEX_SIZE;
 		}
 	}
@@ -259,7 +275,7 @@ public class RenderBatch implements Comparable<RenderBatch>{
 	public boolean hasTexture(Texture texture) {
 		return this.textures.contains(texture);
 	}
-	
+
 	public int zIndex() {
 		return this.zIndex;
 	}

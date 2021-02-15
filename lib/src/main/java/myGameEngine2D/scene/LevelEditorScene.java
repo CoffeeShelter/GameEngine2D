@@ -6,6 +6,7 @@ import imgui.ImGui;
 import imgui.ImVec2;
 import myGameEngine2D.camera.Camera;
 import myGameEngine2D.components.EditorCamera;
+import myGameEngine2D.components.GizmoSystem;
 import myGameEngine2D.components.GridLines;
 import myGameEngine2D.components.MouseControls;
 import myGameEngine2D.components.Sprite;
@@ -22,7 +23,7 @@ public class LevelEditorScene extends Scene {
 	private Spritesheet sprites;
 	SpriteComponent obj1Sprite;
 
-	GameObject levelEditorStuff = new GameObject("LevelEditor", new Transform(new Vector2f()), 0);
+	GameObject levelEditorStuff = this.createGameObject("LevelEditor");
 
 	public LevelEditorScene() {
 
@@ -30,16 +31,17 @@ public class LevelEditorScene extends Scene {
 
 	@Override
 	public void init() {
+		loadResources();
+		sprites = AssetPool.getSpritesheet("res/spritesheets/decorationsAndBlocks.png");
+		Spritesheet gizmos = AssetPool.getSpritesheet("res/spritesheets/gizmos.png");
+
 		this.camera = new Camera(new Vector2f(-250, 0));
-		
 		levelEditorStuff.addComponent(new MouseControls());
 		levelEditorStuff.addComponent(new GridLines());
 		levelEditorStuff.addComponent(new EditorCamera(this.camera));
-
-		loadResources();
+		levelEditorStuff.addComponent(new GizmoSystem(gizmos));
 		
-		sprites = AssetPool.getSpritesheet("res/spritesheets/decorationsAndBlocks.png");
-
+		levelEditorStuff.start();
 //		obj1 = new GameObject("Object 1", new Transform(new Vector2f(200, 100), new Vector2f(256, 256)), 2);
 //		obj1Sprite = new SpriteComponent();
 //		obj1Sprite.setColor(new Vector4f(1, 0, 0, 1));
@@ -62,7 +64,8 @@ public class LevelEditorScene extends Scene {
 
 		AssetPool.addSpritesheet("res/spritesheets/decorationsAndBlocks.png",
 				new Spritesheet(AssetPool.getTexture("res/spritesheets/decorationsAndBlocks.png"), 16, 16, 81, 0));
-
+		AssetPool.addSpritesheet("res/spritesheets/gizmos.png",
+				new Spritesheet(AssetPool.getTexture("res/spritesheets/gizmos.png"), 24, 48, 3, 0));
 		AssetPool.getTexture("res/blendImage2.png");
 
 		for (GameObject g : gameObjects) {
@@ -79,7 +82,7 @@ public class LevelEditorScene extends Scene {
 	public void Update(float deltaTime) {
 		levelEditorStuff.update(deltaTime);
 		this.camera.adjustProjection();
-		
+
 		for (GameObject go : this.gameObjects) {
 			go.update(deltaTime);
 		}
@@ -89,9 +92,13 @@ public class LevelEditorScene extends Scene {
 	public void render() {
 		this.renderer.render();
 	}
-	
+
 	@Override
 	public void imgui() {
+		ImGui.begin("Level Editor Stuff");
+		levelEditorStuff.imgui();
+		ImGui.end();
+
 		ImGui.begin("Test Window");
 
 		ImVec2 windowPos = new ImVec2();

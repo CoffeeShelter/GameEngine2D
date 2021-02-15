@@ -17,6 +17,7 @@ import myGameEngine2D.components.ComponentDeserializer;
 import myGameEngine2D.game.GameObject;
 import myGameEngine2D.game.GameObjectDeserializer;
 import myGameEngine2D.render.Renderer;
+import myGameEngine2D.render.Transform;
 
 public abstract class Scene {
 
@@ -71,6 +72,13 @@ public abstract class Scene {
 
 	}
 
+	public GameObject createGameObject(String name) {
+		GameObject go = new GameObject(name);
+		go.addComponent(new Transform());
+		go.transform = go.getComponent(Transform.class);
+		return go;
+	}
+	
 	public void saveExit() {
 		Gson gson = new GsonBuilder()
 				.setPrettyPrinting()
@@ -79,7 +87,13 @@ public abstract class Scene {
 				.create();
 		try {
 			FileWriter writer = new FileWriter("level.txt");
-			writer.write(gson.toJson(this.gameObjects));
+			List<GameObject> objsToSerialize = new ArrayList<>();
+			for(GameObject obj : this.gameObjects) {
+				if(obj.doSerialization()) {
+					objsToSerialize.add(obj);
+				}
+			}
+			writer.write(gson.toJson(objsToSerialize));
 			writer.close();
 		}catch(IOException e) {
 			e.printStackTrace();
