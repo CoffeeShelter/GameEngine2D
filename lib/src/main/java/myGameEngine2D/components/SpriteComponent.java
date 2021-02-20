@@ -40,6 +40,14 @@ public class SpriteComponent extends Component {
 			isDirty = true;
 		}
 	}
+	
+	@Override
+	public void editorUpdate(float dt) {
+		if (!this.lastTransform.equals(this.gameObject.transform)) {
+			this.gameObject.transform.copy(this.lastTransform);
+			isDirty = true;
+		}
+	}
 
 	@Override
 	public void imgui() {
@@ -48,6 +56,10 @@ public class SpriteComponent extends Component {
 		}
 	}
 
+	public void setDirty() {
+		this.isDirty = true;
+	}
+	
 	public Vector4f getColor() {
 		return this.color;
 	}

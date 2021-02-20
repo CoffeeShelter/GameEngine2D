@@ -3,6 +3,8 @@
 	<name>myGameEngine2D</name>
 	<comment>Project myGameEngine2D created by Buildship.</comment>
 	<projects>
+		<project>jbox2d</project>
+		<project>jbox2d-library</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

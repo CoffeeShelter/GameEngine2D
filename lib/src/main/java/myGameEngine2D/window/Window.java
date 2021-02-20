@@ -2,7 +2,6 @@ package myGameEngine2D.window;
 
 import static org.lwjgl.glfw.GLFW.GLFW_FALSE;
 import static org.lwjgl.glfw.GLFW.GLFW_MAXIMIZED;
-import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT;
 import static org.lwjgl.glfw.GLFW.GLFW_RESIZABLE;
 import static org.lwjgl.glfw.GLFW.GLFW_TRUE;
 import static org.lwjgl.glfw.GLFW.GLFW_VISIBLE;
@@ -41,28 +40,32 @@ import org.lwjgl.Version;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
 
+import myGameEngine2D.game.GameObject;
 import myGameEngine2D.gui.ImGuiLayer;
 import myGameEngine2D.listener.KeyListener;
 import myGameEngine2D.listener.MouseListener;
+import myGameEngine2D.observers.EventSystem;
+import myGameEngine2D.observers.Observer;
+import myGameEngine2D.observers.events.Event;
+import myGameEngine2D.observers.events.EventType;
 import myGameEngine2D.render.DebugDraw;
 import myGameEngine2D.render.Framebuffer;
 import myGameEngine2D.render.PickingTexture;
 import myGameEngine2D.render.Renderer;
-import myGameEngine2D.scene.LevelEditorScene;
-import myGameEngine2D.scene.LevelScene;
+import myGameEngine2D.scene.LevelEditorSceneInitializer;
 import myGameEngine2D.scene.Scene;
+import myGameEngine2D.scene.SceneInitializer;
 import myGameEngine2D.shader.Shader;
 import myGameEngine2D.util.AssetPool;
 
-public class Window {
+public class Window implements Observer {
 	private int width, height;
 	private String title;
 	private long glfwWindow;
 	private ImGuiLayer imguiLayer;
 	private Framebuffer framebuffer;
 	private PickingTexture pickingTexture;
-
-	public float r, g, b, a;
+	private boolean runtimePlaying = false;
 
 	private static Window window = null;
 
@@ -72,28 +75,16 @@ public class Window {
 		this.width = 1280;
 		this.height = 720;
 		this.title = "MyGame";
-
-		r = 0.8f;
-		g = 0.8f;
-		b = 0.8f;
-		a = 0.8f;
+		EventSystem.addObserver(this);
 	}
 
-	public static void changeScene(int newScene) {
-		switch (newScene) {
-		case 0:
-			currentScene = new LevelEditorScene();
-			break;
-
-		case 1:
-			currentScene = new LevelScene();
-			break;
-
-		default:
-			assert false : "Unknown scene '" + newScene + "'";
-			break;
+	public static void changeScene(SceneInitializer sceneInitializer) {
+		if (currentScene != null) {
+			currentScene.destroy();
 		}
 
+		getImguiLayer().getPropertiesWindow().setActiveGameObject(null);
+		currentScene = new Scene(sceneInitializer);
 		currentScene.load();
 		currentScene.init();
 		currentScene.start();
@@ -176,8 +167,8 @@ public class Window {
 
 		this.imguiLayer = new ImGuiLayer(glfwWindow, pickingTexture);
 		this.imguiLayer.initGui();
-		
-		Window.changeScene(0);
+
+		Window.changeScene(new LevelEditorSceneInitializer());
 	}
 
 	public void loop() {
@@ -188,7 +179,7 @@ public class Window {
 
 		Shader defalutShader = AssetPool.getShader("Shaders/default.glsl");
 		Shader pickingShader = AssetPool.getShader("Shaders/pickingShader.glsl");
-		
+
 		while (!glfwWindowShouldClose(glfwWindow)) {
 			glfwPollEvents();
 
@@ -202,38 +193,41 @@ public class Window {
 
 			Renderer.bindShader(pickingShader);
 			currentScene.render();
-			
+
 			pickingTexture.disableWriting();
 			glEnable(GL_BLEND);
-			
+
 			// Render pass 2. Render actual game
 
 			DebugDraw.beginFrame();
 
 			this.framebuffer.bind();
 
-			glClearColor(r, g, b, a);
+			glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT);
 
 			if (deltaTime >= 0) {
 				DebugDraw.draw();
 				Renderer.bindShader(defalutShader);
-				currentScene.Update(deltaTime);
+				if (runtimePlaying) {
+					currentScene.update(deltaTime);
+				} else {
+					currentScene.editorUpdate(deltaTime);
+				}
 				currentScene.render();
 			}
+
 			this.framebuffer.unbind();
 
 			this.imguiLayer.update(deltaTime, currentScene);
 			glfwSwapBuffers(glfwWindow);
 			MouseListener.endFrame();
-			
+
 			// endTime = Time.getTime();
 			endTime = (float) glfwGetTime();
 			deltaTime = endTime - beginTime;
 			beginTime = endTime;
 		}
-
-		currentScene.saveExit();
 	}
 
 	public static int getWidth() {
@@ -259,8 +253,30 @@ public class Window {
 	public static float getTargetAspectRatio() {
 		return 16.0f / 9.0f;
 	}
-	
+
 	public static ImGuiLayer getImguiLayer() {
 		return get().imguiLayer;
+	}
+
+	@Override
+	public void onNotify(GameObject object, Event event) {
+
+		switch (event.type) {
+		case GameEngineStartPlay:
+			this.runtimePlaying = true;
+			currentScene.save();
+			Window.changeScene(new LevelEditorSceneInitializer());
+			break;
+		case GameEngineStopPlay:
+			this.runtimePlaying = false;
+			Window.changeScene(new LevelEditorSceneInitializer());
+			break;
+		case LoadLevel:
+			Window.changeScene(new LevelEditorSceneInitializer());
+			break;
+		case SaveLevel:
+			currentScene.save();
+			break;
+		}
 	}
 }

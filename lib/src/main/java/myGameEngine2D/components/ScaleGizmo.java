@@ -10,7 +10,7 @@ public class ScaleGizmo extends Gizmo{
 
 
 	@Override
-	public void update(float deltaTime) {
+	public void editorUpdate(float deltaTime) {
 		
 		if(activeGameObject != null) {
 			if(xAxisActive && !yAxisActive) {
@@ -20,7 +20,7 @@ public class ScaleGizmo extends Gizmo{
 			}
 		}
 		
-		super.update(deltaTime);
+		super.editorUpdate(deltaTime);
 		
 	}
 }

@@ -16,12 +16,18 @@ project.ext.jomlVersion = "1.10.0"
 project.ext.lwjglNatives = "natives-windows"
 
 repositories {
+	flatDir {
+		dirs 'libs'
+	}
     // Use JCenter for resolving dependencies.
     jcenter()
     mavenCentral()
 }
 
 dependencies {
+	// Box2D
+	implementation name: 'jbox2d-library'
+
 	// Gson
 	implementation 'com.google.code.gson:gson:2.8.6'
 

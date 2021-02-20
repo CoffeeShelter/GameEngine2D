@@ -72,6 +72,7 @@ import imgui.flag.ImGuiWindowFlags;
 import imgui.gl3.ImGuiImplGl3;
 import imgui.type.ImBoolean;
 import myGameEngine2D.editor.GameViewWindow;
+import myGameEngine2D.editor.MenuBar;
 import myGameEngine2D.editor.PropertiesWindow;
 import myGameEngine2D.listener.KeyListener;
 import myGameEngine2D.listener.MouseListener;
@@ -91,11 +92,14 @@ public class ImGuiLayer {
 
 	private GameViewWindow gameViewWindow;
 	private PropertiesWindow propertiesWindow;
+	private MenuBar menuBar;
 	
 	public ImGuiLayer(long glfwWindow, PickingTexture pickingTexture) {
 		this.glfwWindow = glfwWindow;
 		this.gameViewWindow = new GameViewWindow();
 		this.propertiesWindow= new PropertiesWindow(pickingTexture);
+		this.menuBar = new MenuBar();
+		
 	}
 
 	public void initGui() {
@@ -261,6 +265,7 @@ public class ImGuiLayer {
 		gameViewWindow.imgui();
 		propertiesWindow.update(deltaTime, currentScene);
 		propertiesWindow.imgui();
+		menuBar.imgui();
 		ImGui.end();
 		ImGui.render();
 
